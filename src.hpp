@@ -87,7 +87,12 @@ public:
     
     void append(const pylist& x) {
         data->is_scalar = false; // Clear scalar flag when appending
-        data->elements.push_back(Element(x));
+        // If x is a scalar pylist, append the int value instead
+        if (x.data->is_scalar && !x.data->elements.empty()) {
+            data->elements.push_back(Element(x.data->elements[0].as_int()));
+        } else {
+            data->elements.push_back(Element(x));
+        }
     }
     
     pylist pop() {

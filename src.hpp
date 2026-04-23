@@ -116,6 +116,8 @@ public:
     private:
         Element& elem;
         
+        friend class pylist;  // Allow pylist to access elem
+        
     public:
         ElementProxy(Element& e) : elem(e) {}
         
@@ -189,6 +191,16 @@ public:
     
     ElementProxy operator[](size_t i) {
         return ElementProxy(data->elements[i]);
+    }
+    
+    // Implementation of append for ElementProxy
+    void append(const ElementProxy& proxy) {
+        // Check if the proxy contains an int or pylist and append accordingly
+        if (proxy.elem.is_int()) {
+            append(proxy.elem.as_int());
+        } else {
+            append(proxy.elem.as_pylist());
+        }
     }
     
     friend std::ostream& operator<<(std::ostream& os, const pylist& ls) {

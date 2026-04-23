@@ -49,44 +49,53 @@ private:
         }
     };
     
+    // Shared state structure
+    struct SharedState {
+        std::vector<Element> elements;
+        bool is_scalar;
+        
+        SharedState() : is_scalar(false) {}
+        SharedState(int val, bool scalar) : is_scalar(scalar) {
+            if (scalar) {
+                elements.push_back(Element(val));
+            }
+        }
+    };
+    
     // Shared data structure to enable reference semantics
-    std::shared_ptr<std::vector<Element>> data;
-    bool is_scalar; // Flag to indicate if this represents a single int value
+    std::shared_ptr<SharedState> data;
 
 public:
-    pylist() : data(std::make_shared<std::vector<Element>>()), is_scalar(false) {}
+    pylist() : data(std::make_shared<SharedState>()) {}
     
     // Special constructor for scalar values
-    pylist(int val, bool scalar) : data(std::make_shared<std::vector<Element>>()), is_scalar(scalar) {
-        if (scalar) {
-            data->push_back(Element(val));
-        }
-    }
+    pylist(int val, bool scalar) : data(std::make_shared<SharedState>(val, scalar)) {}
     
     // Copy constructor - shares the data (reference semantics)
-    pylist(const pylist& other) : data(other.data), is_scalar(other.is_scalar) {}
+    pylist(const pylist& other) : data(other.data) {}
     
     // Assignment operator - shares the data (reference semantics)
     pylist& operator=(const pylist& other) {
         data = other.data;
-        is_scalar = other.is_scalar;
         return *this;
     }
     
     void append(int x) {
-        data->push_back(Element(x));
+        data->is_scalar = false; // Clear scalar flag when appending
+        data->elements.push_back(Element(x));
     }
     
     void append(const pylist& x) {
-        data->push_back(Element(x));
+        data->is_scalar = false; // Clear scalar flag when appending
+        data->elements.push_back(Element(x));
     }
     
     pylist pop() {
-        if (data->empty()) {
+        if (data->elements.empty()) {
             return pylist();
         }
-        Element elem = data->back();
-        data->pop_back();
+        Element elem = data->elements.back();
+        data->elements.pop_back();
         if (elem.is_int()) {
             return pylist(elem.as_int(), true); // Return as scalar
         } else {
@@ -96,8 +105,8 @@ public:
     
     // Conversion operator to int for scalar values
     operator int() const {
-        if (is_scalar && !data->empty()) {
-            return (*data)[0].as_int();
+        if (data->is_scalar && !data->elements.empty()) {
+            return data->elements[0].as_int();
         }
         return 0;
     }
@@ -179,19 +188,19 @@ public:
     };
     
     ElementProxy operator[](size_t i) {
-        return ElementProxy((*data)[i]);
+        return ElementProxy(data->elements[i]);
     }
     
     friend std::ostream& operator<<(std::ostream& os, const pylist& ls) {
-        if (ls.is_scalar && !ls.data->empty()) {
+        if (ls.data->is_scalar && !ls.data->elements.empty()) {
             // Print as scalar int
-            os << (*ls.data)[0].as_int();
+            os << ls.data->elements[0].as_int();
         } else {
             // Print as list
             os << "[";
-            for (size_t i = 0; i < ls.data->size(); ++i) {
+            for (size_t i = 0; i < ls.data->elements.size(); ++i) {
                 if (i > 0) os << ", ";
-                const Element& elem = (*ls.data)[i];
+                const Element& elem = ls.data->elements[i];
                 if (elem.is_int()) {
                     os << elem.as_int();
                 } else {

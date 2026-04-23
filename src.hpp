@@ -94,6 +94,14 @@ public:
         }
     }
     
+    // Conversion operator to int for scalar values
+    operator int() const {
+        if (is_scalar && !data->empty()) {
+            return (*data)[0].as_int();
+        }
+        return 0;
+    }
+    
     // Proxy class to handle both reading and writing
     class ElementProxy {
     private:
@@ -144,6 +152,19 @@ public:
         
         void append(const pylist& x) {
             elem.as_pylist().append(x);
+        }
+        
+        // Support pop for nested lists
+        pylist pop() {
+            return elem.as_pylist().pop();
+        }
+        
+        // Support taking address (returns pointer to underlying pylist)
+        pylist* operator&() {
+            if (!elem.is_int()) {
+                return &(elem.as_pylist());
+            }
+            return nullptr;
         }
         
         // Output operator
